@@ -147,17 +147,19 @@ func doDownload(downloadUrl string, directory string, filename string, concurren
 	fmt.Println("File downloaded successfully.")
 }
 
+// Download is the command function where the downloading begin.
 func Download() func(ctx *cli.Context) error {
 	return func(ctx *cli.Context) error {
 		var outputFileName string = util.GetNameBasedOnUrl(ctx.Args().Get(0))
 		concurrency := ctx.Int("concurrency")
+
 		if ctx.Args().Len() == 0 {
 			fmt.Println("Please provide a URL to download something.")
 			os.Exit(1)
 		}
 
-		if len(ctx.String("output")) != 0 && ctx.String("output") != util.GetNameBasedOnUrl(ctx.Args().Get(0)) {
-			outputFileName = ctx.String("output")
+		if len(ctx.String("filename")) != 0 && ctx.String("filename") != util.GetNameBasedOnUrl(ctx.Args().Get(0)) {
+			outputFileName = ctx.String("filename")
 		}
 
 		doDownload(ctx.Args().Get(0), ctx.String("dir"), outputFileName, concurrency)

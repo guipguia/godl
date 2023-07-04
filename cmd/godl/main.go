@@ -16,8 +16,9 @@ func main() {
 		Name:        "godl",
 		Usage:       "CLI tool to download files from the internet.",
 		Description: "Powerful CLI that enables asynchronous file downloads with ease and speed.",
+		Version:     "v0.1.0",
 		Flags: []cli.Flag{
-			flags.Output(),
+			flags.Filename(),
 			flags.Directory(),
 			flags.Concurrency(),
 		},
