@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -13,11 +14,13 @@ import (
 )
 
 type progressWriter struct {
-	total        int64
-	downloaded   int64
-	lock         sync.Mutex
-	startTime    time.Time
-	currentSpeed float64
+	total            int64
+	downloaded       int64
+	lock             sync.Mutex
+	startTime        time.Time
+	endTime          time.Time
+	currentSpeed     float64
+	currentSpeedUnit string
 }
 
 func (pw *progressWriter) Write(p []byte) (int, error) {
@@ -67,24 +70,71 @@ func downloadRange(client *http.Client, url string, file *os.File, start, end in
 	}
 }
 
+// func updateProgress(progress *progressWriter, totalSize int64) {
+// 	progress.startTime = time.Now()
+
+// 	for {
+// 		progress.lock.Lock()
+// 		downloaded := progress.downloaded
+// 		currentSpeed := progress.currentSpeed
+// 		progress.lock.Unlock()
+
+// 		percentage := float64(downloaded) / float64(totalSize) * 100.0
+// 		fmt.Printf("\rProgress: %.2f%% | Speed: %.2f KB/s", percentage, currentSpeed)
+
+// 		if downloaded >= totalSize {
+// 			break
+// 		}
+
+// 		time.Sleep(500 * time.Millisecond) // Update interval
+// 	}
+// }
+
 func updateProgress(progress *progressWriter, totalSize int64) {
 	progress.startTime = time.Now()
+	prevProgressLen := 0
 
 	for {
 		progress.lock.Lock()
 		downloaded := progress.downloaded
 		currentSpeed := progress.currentSpeed
+		currentSpeedUnit := progress.currentSpeedUnit
 		progress.lock.Unlock()
 
 		percentage := float64(downloaded) / float64(totalSize) * 100.0
-		fmt.Printf("\rProgress: %.2f%% | Speed: %.2f KB/s", percentage, currentSpeed)
+
+		if currentSpeed >= 1024 {
+			currentSpeedUnit = "MB/s"
+		}
+
+		if currentSpeedUnit == "MB/s" {
+			currentSpeed /= 1024 // Convert average speed to MB/s if necessary
+		}
+
+		remainingBytes := totalSize - downloaded
+		remainingTime := time.Duration(float64(remainingBytes)/(progress.currentSpeed*1024)) * time.Second
+
+		progressMsg := fmt.Sprintf("\rProgress: %.2f%% | Speed: %.2f %s | Remaining Time: %s",
+			percentage, currentSpeed, currentSpeedUnit, remainingTime.Round(time.Second))
+
+		// Clear the previous progress output
+		if len(progressMsg) < prevProgressLen {
+			clearProgress := strings.Repeat(" ", prevProgressLen)
+			fmt.Print("\r" + clearProgress + "\r")
+		}
+
+		// Print the current progress
+		fmt.Print(progressMsg)
+		prevProgressLen = len(progressMsg)
 
 		if downloaded >= totalSize {
 			break
 		}
 
-		time.Sleep(500 * time.Millisecond) // Update interval
+		time.Sleep(200 * time.Millisecond) // Update interval
 	}
+
+	progress.endTime = time.Now()
 }
 
 // doDowwnload start downloading the file and save it to specified location
@@ -110,15 +160,14 @@ func doDownload(downloadUrl string, directory string, filename string, concurren
 	defer file.Close()
 
 	// Create a HTTP client with timeout
-	client := &http.Client{
-		Timeout: 60 * time.Second,
-	}
+	client := &http.Client{}
 
 	// Create a progressWriter to track the download progress
 	progress := &progressWriter{
-		total:      fileSize,
-		downloaded: 0,
-		lock:       sync.Mutex{},
+		total:            fileSize,
+		downloaded:       0,
+		lock:             sync.Mutex{},
+		currentSpeedUnit: "KB/s",
 	}
 
 	go updateProgress(progress, fileSize)
@@ -144,7 +193,7 @@ func doDownload(downloadUrl string, directory string, filename string, concurren
 	// Wait for all goroutines to finish
 	wg.Wait()
 
-	fmt.Println("File downloaded successfully.")
+	fmt.Println("\nFile downloaded successfully.")
 }
 
 // Download is the command function where the downloading begin.

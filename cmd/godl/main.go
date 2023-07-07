@@ -8,6 +8,7 @@ import (
 
 	"github.com/guipguia/godl/internal/commands"
 	"github.com/guipguia/godl/internal/flags"
+	"github.com/guipguia/godl/internal/util"
 	"github.com/urfave/cli/v2"
 )
 
@@ -16,13 +17,14 @@ func main() {
 		Name:        "godl",
 		Usage:       "CLI tool to download files from the internet.",
 		Description: "Powerful CLI that enables asynchronous file downloads with ease and speed.",
-		Version:     "v0.1.0",
 		Flags: []cli.Flag{
 			flags.Filename(),
 			flags.Directory(),
 			flags.Concurrency(),
+			flags.Version(),
 		},
-		Action: commands.Download(),
+		Version: util.VersionNumber,
+		Action:  commands.Download(),
 	}
 
 	if info, ok := debug.ReadBuildInfo(); !ok {
@@ -30,6 +32,9 @@ func main() {
 	} else {
 		app.Version = info.Main.Version
 	}
+
+	//Set app version
+	// flags.SetVersion()
 
 	sort.Sort(cli.FlagsByName(app.Flags))
 	sort.Sort(cli.CommandsByName(app.Commands))

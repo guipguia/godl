@@ -44,7 +44,7 @@ Also all the flags can be set as environment variables to be always a default va
 
 ## Example
 
-![Example of output](./assets/example.png)
+![Example of output](https://github.com/guipguia/godl/blob/main/assets/example.gif)
 
 ## Contributing
 
