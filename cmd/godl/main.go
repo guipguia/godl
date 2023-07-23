@@ -22,9 +22,10 @@ func main() {
 			flags.Directory(),
 			flags.Concurrency(),
 			flags.Version(),
+			flags.Force(),
 		},
 		Version: util.VersionNumber,
-		Action:  commands.Download(),
+		Action:  commands.Run(),
 	}
 
 	if info, ok := debug.ReadBuildInfo(); !ok {
@@ -32,9 +33,6 @@ func main() {
 	} else {
 		app.Version = info.Main.Version
 	}
-
-	//Set app version
-	// flags.SetVersion()
 
 	sort.Sort(cli.FlagsByName(app.Flags))
 	sort.Sort(cli.CommandsByName(app.Commands))

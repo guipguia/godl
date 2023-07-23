@@ -1,17 +1,22 @@
-package commands
+package download
 
 import (
 	"fmt"
 	"io"
 	"net/http"
 	"os"
+	"path"
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/guipguia/godl/internal/util"
-	"github.com/urfave/cli/v2"
 )
+
+type Downloader struct {
+	Url         string
+	Dir         string
+	FileName    string
+	Concurrency int
+}
 
 type progressWriter struct {
 	total            int64
@@ -70,26 +75,6 @@ func downloadRange(client *http.Client, url string, file *os.File, start, end in
 	}
 }
 
-// func updateProgress(progress *progressWriter, totalSize int64) {
-// 	progress.startTime = time.Now()
-
-// 	for {
-// 		progress.lock.Lock()
-// 		downloaded := progress.downloaded
-// 		currentSpeed := progress.currentSpeed
-// 		progress.lock.Unlock()
-
-// 		percentage := float64(downloaded) / float64(totalSize) * 100.0
-// 		fmt.Printf("\rProgress: %.2f%% | Speed: %.2f KB/s", percentage, currentSpeed)
-
-// 		if downloaded >= totalSize {
-// 			break
-// 		}
-
-// 		time.Sleep(500 * time.Millisecond) // Update interval
-// 	}
-// }
-
 func updateProgress(progress *progressWriter, totalSize int64) {
 	progress.startTime = time.Now()
 	prevProgressLen := 0
@@ -137,9 +122,8 @@ func updateProgress(progress *progressWriter, totalSize int64) {
 	progress.endTime = time.Now()
 }
 
-// doDowwnload start downloading the file and save it to specified location
-func doDownload(downloadUrl string, directory string, filename string, concurrency int) {
-	res, err := http.Get(downloadUrl)
+func (d *Downloader) doDownload() {
+	res, err := http.Get(d.Url)
 	if err != nil {
 		fmt.Printf("Faield to download file: %s\n", err)
 		return
@@ -152,7 +136,7 @@ func doDownload(downloadUrl string, directory string, filename string, concurren
 		return
 	}
 
-	file, err := os.Create(directory + "/" + filename)
+	file, err := os.Create(path.Join(d.Dir, d.FileName))
 	if err != nil {
 		fmt.Printf("Failed to create file: %s\n", err)
 		return
@@ -172,46 +156,37 @@ func doDownload(downloadUrl string, directory string, filename string, concurren
 
 	go updateProgress(progress, fileSize)
 
-	chunk := fileSize / int64(concurrency)
+	chunk := fileSize / int64(d.Concurrency)
 
 	var wg sync.WaitGroup
-	wg.Add(concurrency)
+	wg.Add(d.Concurrency)
 
 	// Start the goroutines for concurrent downloading
-	for i := 0; i < concurrency; i++ {
+	for i := 0; i < d.Concurrency; i++ {
 		start := int64(i) * chunk
 		end := start + chunk - 1
 
 		// For the last goroutine, download the remaining bytes
-		if i == concurrency-1 {
+		if i == d.Concurrency-1 {
 			end = fileSize - 1
 		}
 
-		go downloadRange(client, downloadUrl, file, start, end, progress, &wg)
+		go downloadRange(client, d.Url, file, start, end, progress, &wg)
 	}
 
 	// Wait for all goroutines to finish
 	wg.Wait()
 
-	fmt.Println("\nFile downloaded successfully.")
+	fmt.Printf("\n%s downloaded successfully.\n", d.FileName)
 }
 
-// Download is the command function where the downloading begin.
-func Download() func(ctx *cli.Context) error {
-	return func(ctx *cli.Context) error {
-		var outputFileName string = util.GetNameBasedOnUrl(ctx.Args().Get(0))
-		concurrency := ctx.Int("concurrency")
-
-		if ctx.Args().Len() == 0 {
-			fmt.Println("Please provide a URL to download something.")
-			os.Exit(1)
-		}
-
-		if len(ctx.String("filename")) != 0 && ctx.String("filename") != util.GetNameBasedOnUrl(ctx.Args().Get(0)) {
-			outputFileName = ctx.String("filename")
-		}
-
-		doDownload(ctx.Args().Get(0), ctx.String("dir"), outputFileName, concurrency)
-		return nil
+func StartDownload(url string, fullPath string, concurrency int) {
+	d := Downloader{
+		Url:         url,
+		Dir:         path.Dir(fullPath),
+		FileName:    path.Base(fullPath),
+		Concurrency: concurrency,
 	}
+
+	d.doDownload()
 }
