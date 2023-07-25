@@ -1,15 +1,12 @@
 package util
 
 import (
-	"net/url"
 	"path"
+	"strings"
 )
 
 // GetNameBasedOnUrl will return the base name of the given URL.
-func GetNameBasedOnUrl(fullURL string) string {
-	parsedURL, err := url.Parse(fullURL)
-	if err != nil {
-		panic(err)
-	}
-	return path.Base(parsedURL.Path)
+func GetBaseName(s string) string {
+	normalizedName := strings.ReplaceAll(s, "\\", "/")
+	return path.Base(normalizedName)
 }
