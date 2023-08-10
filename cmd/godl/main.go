@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"runtime/debug"
 	"sort"
 
 	"github.com/guipguia/godl/internal/commands"
@@ -21,17 +20,10 @@ func main() {
 			flags.Filename(),
 			flags.Directory(),
 			flags.Concurrency(),
-			flags.Version(),
 			flags.Force(),
 		},
 		Version: util.VersionNumber,
-		Action:  commands.Run(),
-	}
-
-	if info, ok := debug.ReadBuildInfo(); !ok {
-		app.Version = "Could not get version information. Please take a look into: https://github.com/guipguia/godl"
-	} else {
-		app.Version = info.Main.Version
+		Action:  commands.MainCmd(),
 	}
 
 	sort.Sort(cli.FlagsByName(app.Flags))

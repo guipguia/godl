@@ -1,3 +1,3 @@
 package util
 
-const VersionNumber = "v0.1.3"
+const VersionNumber = "v0.1.4"

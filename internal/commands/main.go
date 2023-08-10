@@ -53,7 +53,7 @@ func doForceVerification(f bool, path string) {
 
 // Download is the command function to gether arguments
 // so we can start download
-func Run() func(ctx *cli.Context) error {
+func MainCmd() func(ctx *cli.Context) error {
 	return func(ctx *cli.Context) error {
 		doInitialVerifications(ctx)
 
